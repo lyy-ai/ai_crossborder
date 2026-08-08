@@ -1,0 +1,17 @@
+{
+  "bailian_api_key": "",
+  "bailian_base_url": "https://model-router.edu-aliyun.com/v1",
+  "providers": {
+    "llm": "local",
+    "image": "local",
+    "video": "local",
+    "tts": "local"
+  },
+  "bailian_models": {
+    "llm": "qwen/qwen3.7-max",
+    "image": "qwen/wan2.7-image-pro",
+    "video": "qwen/wan2.7-t2v",
+    "tts": "qwen/qwen3-tts-instruct-flash"
+  },
+  "_comment": "百炼Key发放后：1) 填 bailian_api_key 2) 把 providers 里对应项改成 bailian 3) 重启后端。全部改=纯百炼，部分改=混合模式"
+}
