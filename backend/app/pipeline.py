@@ -35,19 +35,44 @@ async def broadcast(jid, event):
 
 async def gen_one_script(job, product, video):
     vid = video["id"]
-    script = await providers.llm_json(
-        prompts.SCRIPT_SYSTEM,
-        prompts.script_user(product, video["platform"], video["language"],
-                            product["market"], video["variant"]))
-    normalize_script(script)
+    lang = video["language"]
+    last_err = None
+    for _ in range(3):
+        try:
+            script = await providers.llm_json(
+                prompts.SCRIPT_SYSTEM,
+                prompts.script_user(product, video["platform"], lang,
+                                    product["market"], video["variant"]))
+            normalize_script(script)
+            if script_lang_ok(script, lang):
+                break
+            last_err = RuntimeError(f"script language mismatch (expect {lang})")
+        except Exception as e:
+            last_err = e
+    else:
+        raise last_err
     comp = await providers.llm_json(
         prompts.COMPLIANCE_SYSTEM,
-        prompts.compliance_user(script, product["market"], video["language"]),
+        prompts.compliance_user(script, product["market"], lang),
         max_tokens=1500)
-    db.upsert_video(vid, job["id"], video["platform"], video["language"], video["variant"],
+    db.upsert_video(vid, job["id"], video["platform"], lang, video["variant"],
                     status="script_done", script=json.dumps(script, ensure_ascii=False),
                     compliance=json.dumps(comp, ensure_ascii=False))
     return vid
+
+
+def script_lang_ok(script, lang):
+    texts = [script.get("hook", ""), script.get("cta", "")]
+    for s in script["shots"]:
+        texts += [s.get("vo_line", ""), s.get("overlay_text", "")]
+    joined = " ".join(texts)
+    has_kana = any("぀" <= ch <= "ヿ" for ch in joined)
+    has_cjk = any("一" <= ch <= "鿿" for ch in joined)
+    if lang == "en":
+        return not (has_kana or has_cjk)
+    if lang == "ja":
+        return has_kana
+    return True
 
 
 def normalize_script(script):

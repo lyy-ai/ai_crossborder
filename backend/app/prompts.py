@@ -33,9 +33,10 @@ JSON 结构：
 1. 结构：第1个镜头必须是 hook（type=scene 或 product），中间 2-4 个卖点镜头（三种类型混合），最后1个镜头是 CTA（type=card 或 product）
 2. 总镜头数 4-6 个，总时长 15-35 秒
 3. 卖点必须来自用户提供的产品卖点，不得编造参数
-4. overlay_text 和 vo_line 必须使用【目标语言】，口语化、有购买冲动
-5. scene_prompt / video_prompt 必须使用英文，场景要符合目标市场的生活场景和审美
-6. 严格输出合法 JSON"""
+4. 【最重要的语言规则】hook、overlay_text、vo_line、cta、caption 这五个字段必须全部、无一例外地使用【目标语言】；只有 scene_prompt 和 video_prompt 两个字段使用英文。禁止在不同字段间混用语言（例如目标语言是英语时，任何字段都不得出现日语或中文）
+5. overlay_text 和 vo_line 要口语化、有购买冲动
+6. scene_prompt / video_prompt 的场景要符合目标市场的生活场景和审美
+7. 严格输出合法 JSON"""
 
 
 def script_user(product, platform, language, market, variant_idx):
@@ -48,7 +49,9 @@ def script_user(product, platform, language, market, variant_idx):
 脚本语言：{LANG_NAME.get(language, language)}
 这是第 {variant_idx} 个变体，请采用与其他变体不同的切入角度（第1个偏功能卖点、第2个偏场景痛点、第3个偏促销价格、第4个偏社交证明）。
 
-请输出脚本 JSON。"""
+请输出脚本 JSON。
+
+【再次确认语言规则】hook / overlay_text / vo_line / cta / caption 必须全部使用{LANG_NAME.get(language, language)}，不得混入其他任何语言；仅 scene_prompt / video_prompt 使用英文。"""
 
 
 COMPLIANCE_SYSTEM = """你是跨境电商广告合规专家，熟悉美国 FTC/FDA、欧盟广告法、日本药机法（薬機法）、各平台广告政策。
