@@ -25,5 +25,4 @@ Thumbs.db
 *.swp
 
 # 敏感配置（含 API Key，勿提交）
-backend/providers.json
 frontend/node_modules

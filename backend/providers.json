@@ -1,0 +1,17 @@
+{
+  "bailian_api_key": "sk-sp-H.DHYDYP.oIlY.MEYCIQDbMD1LPqFf4-C0Qulrr6OWScv1Q0vfgZp__GOTT75ktQIhAPI5XbH3Sk6fT_HDqi291VjWQ9lEvVm3OMA908hZ749Z",
+  "bailian_base_url": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+  "providers": {
+    "llm": "bailian",
+    "image": "bailian",
+    "video": "bailian",
+    "tts": "bailian"
+  },
+  "bailian_models": {
+    "llm": "qwen3.7-plus",
+    "image": "qwen-image-2.0",
+    "video": "happyhorse-1.1-t2v",
+    "tts": "qwen-audio-3.0-tts-plus"
+  },
+  "_comment": "菜鸟黑客松 Token Plan 专属 Key。OpenAI 兼容地址用于 LLM；图像/视频/语音走同域名 /api/v1 原生端点（见 providers.py）。providers 可单项切回 local 混合使用。"
+}
