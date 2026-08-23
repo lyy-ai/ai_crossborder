@@ -52,8 +52,9 @@
               <img v-for="img in p.images" :key="img" :src="api.productImg(p.id, img)" />
             </div>
           </div>
-          <div style="margin-left:16px">
+          <div style="margin-left:16px;display:flex;flex-direction:column;gap:8px">
             <button class="btn" @click="openWizard(p)">🎬 批量生成视频</button>
+            <button class="btn red" @click="removeProduct(p)">🗑 删除产品</button>
           </div>
         </div>
       </div>
@@ -174,6 +175,13 @@ async function createProduct() {
   creating.value = false
 }
 function openWizard(p) { wizard.value = p }
+async function removeProduct(p) {
+  if (!confirm(`确定删除产品「${p.name}」吗？该产品的图片档案会一并删除（已生成的成片不受影响）。`)) return
+  try {
+    await api.deleteProduct(p.id)
+    await loadProducts()
+  } catch (e) { alert('删除失败: ' + e.message) }
+}
 function toggle(arr, v) {
   const i = arr.indexOf(v)
   if (i >= 0) arr.splice(i, 1); else arr.push(v)

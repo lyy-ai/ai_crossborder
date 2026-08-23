@@ -11,6 +11,7 @@ export const api = {
   staticUrl: (rel) => `${API}/static/output/${rel}`,
   productImg: (pid, fname) => `${API}/static/output/products/${pid}/${fname}`,
   listProducts: () => req('/api/products'),
+  deleteProduct: (pid) => req(`/api/products/${pid}`, { method: 'DELETE' }),
   createProduct: (formData) => req('/api/products', { method: 'POST', body: formData }),
   listJobs: () => req('/api/jobs'),
   createJob: (body) => req('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),

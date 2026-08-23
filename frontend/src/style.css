@@ -11,6 +11,8 @@ h2 { font-size: 19px; margin: 16px 0 12px; }
 .btn.small { padding: 4px 10px; font-size: 12px; }
 .btn.gray { background: #3a3f52; }
 .btn.green { background: #2ea86f; }
+.btn.red { background: #b0403c; }
+.btn.red:hover { background: #c04a45; }
 textarea, input, select { width: 100%; background: #12141d; color: #e6e8ee; border: 1px solid #2a2e3f; border-radius: 8px; padding: 11px 12px; font-size: 15px; font-family: inherit; }
 textarea::placeholder, input::placeholder { color: #4a5064; }
 textarea { resize: vertical; }
