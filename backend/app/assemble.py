@@ -10,10 +10,29 @@ FONT_INDEX = 2
 VIDEO_SIZE = "480x832"
 FPS = 16
 
+# 三平台字幕视觉风格差异化（ASS 颜色格式 &HAABBGGRR）
 PLATFORM_SUB_STYLE = {
-    "tiktok": {"overlay_size": 15, "sub_size": 10, "overlay_margin": 330},
-    "shorts": {"overlay_size": 13, "sub_size": 9, "overlay_margin": 300},
-    "reels": {"overlay_size": 12, "sub_size": 9, "overlay_margin": 300},
+    # TikTok：白色粗体 + 粗黑描边，画面中部偏下，网感强
+    "tiktok": {
+        "overlay": dict(size=20, primary="&H00FFFFFF", back="&H80000000", bold=-1,
+                        italic=0, border=1, outline=3.0, shadow=0, align=5, margin_v=330),
+        "sub": dict(size=12, primary="&H00FFFFFF", back="&H80000000", bold=-1,
+                    italic=0, border=1, outline=2.0, shadow=0, align=2, margin_v=28),
+    },
+    # YouTube Shorts：半透明深色底框包裹文字，极简干净
+    "shorts": {
+        "overlay": dict(size=16, primary="&H00FFFFFF", back="&H96000000", bold=-1,
+                        italic=0, border=3, outline=1.2, shadow=0, align=5, margin_v=300),
+        "sub": dict(size=11, primary="&H00FFFFFF", back="&H96000000", bold=0,
+                    italic=0, border=3, outline=0.8, shadow=0, align=2, margin_v=24),
+    },
+    # Instagram Reels：琥珀色精致标题置于顶部，阴影替代描边，字幕斜体
+    "reels": {
+        "overlay": dict(size=16, primary="&H000B9EF5", back="&H80000000", bold=-1,
+                        italic=0, border=1, outline=0.5, shadow=2, align=8, margin_v=60),
+        "sub": dict(size=11, primary="&H00FFFFFF", back="&H80000000", bold=0,
+                    italic=-1, border=1, outline=1.0, shadow=1, align=2, margin_v=40),
+    },
 }
 
 
@@ -118,6 +137,13 @@ def ass_time(t):
 
 def write_ass(events, path, platform):
     st = PLATFORM_SUB_STYLE.get(platform, PLATFORM_SUB_STYLE["tiktok"])
+
+    def style_line(name, c):
+        return (f"Style: {name}, Droid Sans Fallback, {c['size']}, {c['primary']}, "
+                f"&H00000000, {c['back']}, {c['bold']}, {c['italic']}, 0, 0, 100, 100, "
+                f"0, 0, {c['border']}, {c['outline']}, {c['shadow']}, {c['align']}, "
+                f"10, 10, {c['margin_v']}, 1")
+
     header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: 480
@@ -125,8 +151,8 @@ PlayResY: 832
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Overlay, Droid Sans Fallback, {st['overlay_size']}, &H00FFFFFF, &H00000000, &H80000000, -1, 0, 0, 0, 100, 100, 0, 0, 1, 2.5, 0, 5, 10, 10, {st['overlay_margin']}, 1
-Style: Sub, Droid Sans Fallback, {st['sub_size']}, &H00FFFFFF, &H00000000, &H80000000, 0, 0, 0, 0, 100, 100, 0, 0, 1, 2, 0, 2, 10, 10, 28, 1
+{style_line('Overlay', st['overlay'])}
+{style_line('Sub', st['sub'])}
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
