@@ -3,8 +3,8 @@ import os
 import sqlite3
 import time
 
-DB_PATH = "/data/liyangyang/ai_crossborder/crossborder_video/backend/data/cbv.db"
-OUT_ROOT = "/data/liyangyang/ai_crossborder/crossborder_video/output"
+DB_PATH = "/data/liyangyang/ai_crossborder/backend/data/cbv.db"
+OUT_ROOT = "/data/liyangyang/ai_crossborder/output"
 
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 

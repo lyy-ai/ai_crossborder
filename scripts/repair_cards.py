@@ -6,7 +6,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, "/data/liyangyang/crossborder_video/backend")
+sys.path.insert(0, "/data/liyangyang/ai_crossborder/backend")
 from app import assemble, db
 
 

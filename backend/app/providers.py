@@ -1,16 +1,20 @@
-"""AI 能力 Provider 层 —— 本地引擎 / 阿里云百炼(Model Router) 双引擎切换。
+"""AI 能力 Provider 层 —— 本地引擎 / 阿里云百炼 Token Plan 双引擎切换。
 
 配置：backend/providers.json
-  - bailian_api_key: 百炼 Key 发放后填这里
+  - bailian_api_key: Token Plan 专属 Key（sk-sp- 开头）
+  - bailian_base_url: OpenAI 兼容地址（LLM 用），图像/视频/语音自动推导
+    为同域名原生端点 /api/v1/...
   - providers.llm/image/video/tts: "local" 或 "bailian"，可按模块混合
-  - bailian_models: 各能力对应的百炼模型名
+  - bailian_models: 各能力对应的模型名
 
 接口与 clients.py 保持一致，pipeline 只调本模块。
-注意：百炼视频/语音端点按 OpenAI 兼容惯例编写，Key 到手后请对照
-《Model Router API 完整文档》核对 bailian_video / bailian_tts 两处路径与字段。
+Token Plan 各能力端点（华北2 北京，专属域名）：
+  - LLM:  POST {base_url}/chat/completions            (OpenAI 兼容)
+  - 图像: POST /api/v1/services/aigc/multimodal-generation/generation
+  - 视频: POST /api/v1/services/aigc/video-generation/video-synthesis (异步, 轮询 /api/v1/tasks/{id})
+  - 语音: POST /api/v1/services/audio/tts/SpeechSynthesizer
 """
 import asyncio
-import base64
 import json
 import os
 
@@ -46,6 +50,17 @@ def _bailian_headers():
 
 def _bailian_url(path):
     return cfg()["bailian_base_url"].rstrip("/") + path
+
+
+def _native_url(path):
+    """把 OpenAI 兼容基地址推导为原生 DashScope 端点：
+    https://host/compatible-mode/v1 -> https://host/api/v1 + path"""
+    base = cfg()["bailian_base_url"].rstrip("/")
+    for suffix in ("/compatible-mode/v1", "/v1"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return base + "/api/v1" + path
 
 
 def _bailian_model(capability):
@@ -91,21 +106,22 @@ async def txt2img(prompt_en: str, seed: int, prefix: str, width: int = 768, heig
 
 
 async def bailian_txt2img(prompt_en, seed, width, height):
-    size = f"{width}x{height}"
-    if width * height > 1024 * 1024 * 2:
-        size = "1024x1024"
+    size = f"{width}*{height}"
     async with httpx.AsyncClient(timeout=300) as cli:
-        r = await cli.post(_bailian_url("/images/generations"),
+        r = await cli.post(_native_url("/services/aigc/multimodal-generation/generation"),
                            headers=_bailian_headers(),
                            json={"model": _bailian_model("image"),
-                                 "prompt": prompt_en, "n": 1, "size": size})
+                                 "input": {"messages": [{"role": "user",
+                                                         "content": [{"text": prompt_en}]}]},
+                                 "parameters": {"size": size, "seed": seed}})
         r.raise_for_status()
-        d = r.json()["data"][0]
-        if d.get("b64_json"):
-            return base64.b64decode(d["b64_json"])
-        img = await cli.get(d["url"])
-        img.raise_for_status()
-        return img.content
+        d = r.json()
+        for part in d["output"]["choices"][0]["message"]["content"]:
+            if part.get("image"):
+                img = await cli.get(part["image"])
+                img.raise_for_status()
+                return img.content
+        raise RuntimeError(f"bailian image: no image in response: {str(d)[:300]}")
 
 
 # ---------------- 视频 ----------------
@@ -120,27 +136,27 @@ async def video_generate(prompt: str, job_id: str, seed: int = 42, size: str = "
 
 
 async def bailian_video(prompt, seed, size, frame_num, progress_cb):
-    """百炼视频生成（异步任务式）。端点路径待 Key 到手后按官方文档核对。"""
+    """Token Plan 视频生成（happyhorse-1.1-t2v，异步任务：提交→轮询→下载）。"""
     async with httpx.AsyncClient(timeout=120) as cli:
-        r = await cli.post(_bailian_url("/video/generations"),
-                           headers=_bailian_headers(),
+        r = await cli.post(_native_url("/services/aigc/video-generation/video-synthesis"),
+                           headers={**_bailian_headers(), "X-DashScope-Async": "enable"},
                            json={"model": _bailian_model("video"),
-                                 "prompt": prompt, "size": size, "seed": seed})
+                                 "input": {"prompt": prompt},
+                                 "parameters": {"resolution": "720P", "ratio": "9:16",
+                                                "duration": 5}})
         r.raise_for_status()
-        d = r.json()
-        task_id = d.get("id") or d.get("task_id")
+        task_id = r.json()["output"]["task_id"]
         t0 = asyncio.get_event_loop().time()
         while True:
             await asyncio.sleep(10)
-            s = await cli.get(_bailian_url(f"/video/generations/{task_id}"),
+            s = await cli.get(_native_url(f"/tasks/{task_id}"),
                               headers=_bailian_headers())
-            info = s.json()
-            st = info.get("status")
-            if progress_cb and info.get("progress"):
-                await progress_cb(int(info["progress"] * 50), 50)
-            if st in ("succeeded", "completed", "done"):
-                url = info.get("video_url") or info.get("output", {}).get("video_url")
-                v = await cli.get(url)
+            out = s.json().get("output", {})
+            st = out.get("task_status")
+            if progress_cb:
+                await progress_cb(1, 3)
+            if st == "SUCCEEDED":
+                v = await cli.get(out["video_url"], timeout=300)
                 v.raise_for_status()
                 path = os.path.join("/data/liyangyang/ai_drama/output/video_clips",
                                     f"bailian_{task_id}.mp4")
@@ -148,8 +164,8 @@ async def bailian_video(prompt, seed, size, frame_num, progress_cb):
                 with open(path, "wb") as f:
                     f.write(v.content)
                 return f"video_clips/bailian_{task_id}.mp4"
-            if st in ("failed", "canceled"):
-                raise RuntimeError(f"bailian video failed: {info}")
+            if st in ("FAILED", "CANCELED"):
+                raise RuntimeError(f"bailian video failed: {str(s.json())[:400]}")
             if asyncio.get_event_loop().time() - t0 > 1800:
                 raise TimeoutError("bailian video timeout")
 
@@ -162,20 +178,33 @@ async def tts_generate(text: str, language: str, gender: str, job_id: str, speed
     return await clients.tts_generate(text, language, gender, job_id, speed=speed)
 
 
+BAILIAN_VOICE_MAP = {
+    ("en", "male"): "longanlufeng", ("en", "female"): "longanlingxin",
+    ("ja", "male"): "longanlufeng", ("ja", "female"): "longanlingxin",
+    ("zh", "male"): "longanlufeng", ("zh", "female"): "longanlingxin",
+}
+
+
 async def bailian_tts(text, language, gender, job_id, speed):
-    """百炼 TTS。音色名待 Key 到手后按官方文档核对映射。"""
-    voice = {"en": "Cherry", "ja": "Cherry", "zh": "Cherry"}.get(language, "Cherry")
+    """Token Plan 语音合成（qwen-audio-3.0-tts-plus，非流式，返回音频 URL）。"""
+    voice = BAILIAN_VOICE_MAP.get((language, gender), "longanlingxin")
+    payload = {"model": _bailian_model("tts"),
+               "input": {"text": text, "voice": voice,
+                         "format": "wav", "sample_rate": 24000}}
+    if language == "ja":
+        payload["input"]["instruction"] = "请用自然流畅的日语朗读"
     async with httpx.AsyncClient(timeout=120) as cli:
-        r = await cli.post(_bailian_url("/audio/speech"),
-                           headers=_bailian_headers(),
-                           json={"model": _bailian_model("tts"),
-                                 "input": text, "voice": voice, "speed": speed})
+        r = await cli.post(_native_url("/services/audio/tts/SpeechSynthesizer"),
+                           headers=_bailian_headers(), json=payload)
         r.raise_for_status()
+        url = r.json()["output"]["audio"]["url"]
+        a = await cli.get(url)
+        a.raise_for_status()
         out_dir = "/data/liyangyang/ai_drama/output/audio"
         os.makedirs(out_dir, exist_ok=True)
         path = os.path.join(out_dir, f"{job_id}.wav")
         with open(path, "wb") as f:
-            f.write(r.content)
+            f.write(a.content)
         from . import assemble
         dur = await assemble.ffprobe_duration(path)
         return {"job_id": job_id, "audio": f"audio/{job_id}.wav", "duration": dur}
@@ -188,4 +217,11 @@ async def service_health():
     c = cfg()
     h["_providers"] = c.get("providers", {})
     h["_bailian_key_set"] = bool(c.get("bailian_api_key"))
+    if c.get("bailian_api_key"):
+        try:
+            async with httpx.AsyncClient(timeout=8) as cli:
+                r = await cli.get(_bailian_url("/models"), headers=_bailian_headers())
+                h["bailian"] = r.status_code == 200
+        except Exception:
+            h["bailian"] = False
     return h

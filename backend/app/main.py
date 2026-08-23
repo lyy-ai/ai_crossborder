@@ -16,7 +16,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 db.init()
 
-OUT_ROOT = "/data/liyangyang/ai_crossborder/crossborder_video/output"
+OUT_ROOT = "/data/liyangyang/ai_crossborder/output"
 app.mount("/static/output", StaticFiles(directory=OUT_ROOT), name="output")
 
 
@@ -150,6 +150,8 @@ async def regen_script(vid: str):
             await pipeline.gen_one_script(job, product, v)
             await pipeline.broadcast(v["job_id"], {"type": "video", "video": vid, "stage": "script", "status": "done"})
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             await pipeline.broadcast(v["job_id"], {"type": "video", "video": vid, "stage": "script", "status": "failed", "error": str(e)})
     asyncio.create_task(_run())
     return {"ok": True}

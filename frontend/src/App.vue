@@ -5,7 +5,7 @@
     <div class="header">
       <h1>🌍 跨境爆品短视频工厂</h1>
       <div>
-        <span v-for="(ok, name) in health" :key="name" class="badge" :class="ok ? 'ok' : 'bad'">{{ svcNames[name] || name }}</span>
+        <span v-for="(ok, name) in healthBadges" :key="name" class="badge" :class="ok ? 'ok' : 'bad'">{{ svcNames[name] || name }}</span>
       </div>
     </div>
 
@@ -107,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from './api'
 import Job from './Job.vue'
 
@@ -122,7 +122,13 @@ const pmsg = ref('')
 const wizard = ref(null)
 const starting = ref(false)
 const markets = ['美国', '欧洲', '日本', '东南亚', '中东']
-const svcNames = { llm: '脚本', comfy: '绘图', video: '视频', tts: '配音' }
+const svcNames = { llm: '脚本', comfy: '绘图', video: '视频', tts: '配音', bailian: '云端百炼' }
+const healthBadges = computed(() => {
+  const h = health.value || {}
+  const usingCloud = h._providers && Object.values(h._providers).some(m => m === 'bailian')
+  if (usingCloud) return { bailian: !!h.bailian }
+  return Object.fromEntries(Object.entries(h).filter(([k]) => !k.startsWith('_') && k !== 'bailian'))
+})
 const pform = ref({ name: '', category: '', market: '美国', selling_points: '', files: [] })
 const wform = ref({ platforms: ['tiktok'], languages: ['en'], variants: 2, voice_gender: 'female', auto_produce: false })
 

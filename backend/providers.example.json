@@ -1,6 +1,6 @@
 {
   "bailian_api_key": "",
-  "bailian_base_url": "https://model-router.edu-aliyun.com/v1",
+  "bailian_base_url": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
   "providers": {
     "llm": "local",
     "image": "local",
@@ -8,10 +8,10 @@
     "tts": "local"
   },
   "bailian_models": {
-    "llm": "qwen/qwen3.7-max",
-    "image": "qwen/wan2.7-image-pro",
-    "video": "qwen/wan2.7-t2v",
-    "tts": "qwen/qwen3-tts-instruct-flash"
+    "llm": "qwen3.7-plus",
+    "image": "qwen-image-2.0",
+    "video": "happyhorse-1.1-t2v",
+    "tts": "qwen-audio-3.0-tts-plus"
   },
-  "_comment": "百炼Key发放后：1) 填 bailian_api_key 2) 把 providers 里对应项改成 bailian 3) 重启后端。全部改=纯百炼，部分改=混合模式"
+  "_comment": "Token Plan Key 发放后：1) 填 bailian_api_key 2) 把 providers 里对应项改成 bailian 3) 重启后端。全部改=纯云端，部分改=混合模式"
 }

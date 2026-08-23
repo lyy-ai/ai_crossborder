@@ -8,7 +8,7 @@ COMFY_URL = "http://127.0.0.1:10047"
 VIDEO_URL = "http://127.0.0.1:10050"
 TTS_URL = "http://127.0.0.1:10049"
 
-WF_PATH = "/data/liyangyang/ai_crossborder/crossborder_video/workflows/sdxl_txt2img.json"
+WF_PATH = "/data/liyangyang/ai_crossborder/workflows/sdxl_txt2img.json"
 
 MARKET_STYLE = {
     "美国": "american lifestyle, bright natural lighting, modern home",

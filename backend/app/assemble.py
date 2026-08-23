@@ -4,7 +4,7 @@ import textwrap
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT_ROOT = "/data/liyangyang/ai_crossborder/crossborder_video/output"
+OUT_ROOT = "/data/liyangyang/ai_crossborder/output"
 FONT_PATH = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 FONT_INDEX = 2
 VIDEO_SIZE = "480x832"

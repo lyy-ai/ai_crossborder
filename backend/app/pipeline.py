@@ -5,7 +5,7 @@ import traceback
 
 from . import assemble, clients, db, prompts, providers
 
-OUT_ROOT = "/data/liyangyang/ai_crossborder/crossborder_video/output"
+OUT_ROOT = "/data/liyangyang/ai_crossborder/output"
 FRAME_NUM = 65
 
 produce_tasks = {}
@@ -51,6 +51,12 @@ async def gen_one_script(job, product, video):
 
 
 def normalize_script(script):
+    if not (isinstance(script.get("shots"), list) and script["shots"]):
+        for v in script.values():
+            if isinstance(v, dict) and isinstance(v.get("shots"), list) and v["shots"]:
+                script.clear()
+                script.update(v)
+                break
     assert isinstance(script.get("shots"), list) and script["shots"], "shots missing"
     script.setdefault("hook", "")
     script.setdefault("cta", "Shop now!")
