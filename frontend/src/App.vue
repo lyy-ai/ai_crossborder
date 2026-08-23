@@ -31,10 +31,15 @@
         <label>产品卖点（用；分隔，3-5 条）</label>
         <textarea v-model="pform.selling_points" rows="2" placeholder="例如：40小时超长续航；主动降噪-45dB；蓝牙5.4低延迟；IPX5防水"></textarea>
         <label>产品图（白底图最佳，可多选）</label>
-        <input type="file" multiple accept="image/*" @change="e => pform.files = e.target.files" style="padding:4px" />
-        <div style="margin-top:12px">
-          <button class="btn green" :disabled="creating" @click="createProduct">{{ creating ? '上传中…' : '💾 保存产品' }}</button>
-          <span v-if="pmsg" class="muted" style="margin-left:10px">{{ pmsg }}</span>
+        <label class="upload-box">
+          <input type="file" multiple accept="image/*" style="display:none" @change="e => pform.files = e.target.files" />
+          <span class="upload-icon">🖼️</span>
+          <span v-if="!pform.files || !pform.files.length">点击选择图片（可多选）</span>
+          <span v-else class="upload-files">已选 {{ pform.files.length }} 张：{{ [...pform.files].map(f => f.name).join('、') }}</span>
+        </label>
+        <div style="margin-top:16px">
+          <button class="btn green big" :disabled="creating" @click="createProduct">{{ creating ? '上传中…' : '💾 保存产品' }}</button>
+          <span v-if="pmsg" class="muted" style="margin-left:12px">{{ pmsg }}</span>
         </div>
       </div>
 
@@ -69,37 +74,40 @@
     </div>
 
     <!-- 生成向导弹层 -->
-    <div v-if="wizard" class="card" style="position:fixed;top:10%;left:50%;transform:translateX(-50%);width:560px;z-index:10;box-shadow:0 8px 40px #000">
-      <h2>🎬 批量生成 · {{ wizard.name }}</h2>
-      <label>目标平台（多选）</label>
-      <div>
-        <label v-for="p in ['tiktok', 'shorts', 'reels']" :key="p" style="display:inline-block;margin-right:14px">
-          <input type="checkbox" :value="p" v-model="wform.platforms" style="width:auto" /> {{ p }}
-        </label>
-      </div>
-      <label>语言（多选）</label>
-      <div>
-        <label style="display:inline-block;margin-right:14px"><input type="checkbox" value="en" v-model="wform.languages" style="width:auto" /> 英语</label>
-        <label style="display:inline-block;margin-right:14px"><input type="checkbox" value="ja" v-model="wform.languages" style="width:auto" /> 日语</label>
-      </div>
-      <div class="row">
-        <div><label>每平台每语言变体数</label><input type="number" v-model.number="wform.variants" min="1" max="5" /></div>
-        <div>
-          <label>配音音色</label>
-          <select v-model="wform.voice_gender"><option value="female">女声</option><option value="male">男声</option></select>
+    <div v-if="wizard" class="modal-mask" @click.self="wizard = null">
+      <div class="card modal">
+        <h2>🎬 批量生成 · {{ wizard.name }}</h2>
+        <label>目标平台（多选）</label>
+        <div class="pills">
+          <span v-for="p in ['tiktok', 'shorts', 'reels']" :key="p" class="pill"
+                :class="{ on: wform.platforms.includes(p) }" @click="toggle(wform.platforms, p)">
+            {{ { tiktok: '🎵 TikTok', shorts: '▶️ YouTube Shorts', reels: '📸 Instagram Reels' }[p] }}
+          </span>
         </div>
-        <div>
-          <label>模式</label>
-          <select v-model="wform.auto_produce">
-            <option :value="false">先审脚本再制作</option>
-            <option :value="true">全自动一键出片</option>
-          </select>
+        <label>语言（多选）</label>
+        <div class="pills">
+          <span class="pill" :class="{ on: wform.languages.includes('en') }" @click="toggle(wform.languages, 'en')">🇺🇸 英语</span>
+          <span class="pill" :class="{ on: wform.languages.includes('ja') }" @click="toggle(wform.languages, 'ja')">🇯🇵 日语</span>
         </div>
-      </div>
-      <div class="warn" style="margin-top:8px">预计生成 {{ wform.platforms.length * wform.languages.length * wform.variants }} 条视频；AI 场景镜头每个约 8-9 分钟</div>
-      <div style="margin-top:12px">
-        <button class="btn green" :disabled="!wform.platforms.length || !wform.languages.length || starting" @click="startJob">{{ starting ? '创建中…' : '🚀 开始批量生成' }}</button>
-        <button class="btn gray" style="margin-left:8px" @click="wizard = null">取消</button>
+        <div class="row">
+          <div><label>每平台每语言变体数</label><input type="number" v-model.number="wform.variants" min="1" max="5" /></div>
+          <div>
+            <label>配音音色</label>
+            <select v-model="wform.voice_gender"><option value="female">女声</option><option value="male">男声</option></select>
+          </div>
+          <div>
+            <label>模式</label>
+            <select v-model="wform.auto_produce">
+              <option :value="false">先审脚本再制作</option>
+              <option :value="true">全自动一键出片</option>
+            </select>
+          </div>
+        </div>
+        <div class="warn" style="margin-top:10px;font-size:14px">预计生成 {{ wform.platforms.length * wform.languages.length * wform.variants }} 条视频；AI 场景镜头每个约 1-2 分钟</div>
+        <div style="margin-top:16px">
+          <button class="btn green big" :disabled="!wform.platforms.length || !wform.languages.length || starting" @click="startJob">{{ starting ? '创建中…' : '🚀 开始批量生成' }}</button>
+          <button class="btn gray big" style="margin-left:10px" @click="wizard = null">取消</button>
+        </div>
       </div>
     </div>
     </template>
@@ -166,6 +174,10 @@ async function createProduct() {
   creating.value = false
 }
 function openWizard(p) { wizard.value = p }
+function toggle(arr, v) {
+  const i = arr.indexOf(v)
+  if (i >= 0) arr.splice(i, 1); else arr.push(v)
+}
 async function startJob() {
   starting.value = true
   try {
