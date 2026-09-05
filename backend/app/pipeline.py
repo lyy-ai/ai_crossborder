@@ -205,12 +205,15 @@ async def produce_video(job, product, video):
     for i, shot in enumerate(script["shots"]):
         merged_path = os.path.join(d, f"merged{i}.mp4")
         dur = await assemble.merge_shot(clip_paths[i], wav_paths[i], merged_path)
-        if shot.get("overlay_text"):
-            events.append({"start": t + 0.15, "end": t + dur - 0.1,
-                           "style": "Overlay", "text": shot["overlay_text"]})
-        if shot.get("vo_line"):
-            events.append({"start": t + 0.15, "end": t + dur - 0.1,
-                           "style": "Sub", "text": shot["vo_line"]})
+        # card 镜头的 overlay_text/vo_line 已渲染进卡片图（text_card），
+        # 再烧 ASS 字幕会重影，故跳过
+        if shot["type"] != "card":
+            if shot.get("overlay_text"):
+                events.append({"start": t + 0.15, "end": t + dur - 0.1,
+                               "style": "Overlay", "text": shot["overlay_text"]})
+            if shot.get("vo_line"):
+                events.append({"start": t + 0.15, "end": t + dur - 0.1,
+                               "style": "Sub", "text": shot["vo_line"]})
         merged.append(merged_path)
         t += dur
 

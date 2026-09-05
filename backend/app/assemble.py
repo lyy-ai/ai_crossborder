@@ -63,32 +63,57 @@ async def kenburns(image, out, dur):
                "-t", f"{dur:.2f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", out])
 
 
+def _font(size):
+    return ImageFont.truetype(FONT_PATH, size, index=FONT_INDEX)
+
+
+def _fit_lines(d, text, max_w, size, min_size=20):
+    """把 text 按像素宽度换行；若最宽的行仍超宽则整体缩字号直到适配。"""
+    while True:
+        font = _font(size)
+        lines = []
+        for para in text.split("\n"):
+            cur = ""
+            for ch in para:
+                if d.textlength(cur + ch, font=font) > max_w and cur:
+                    lines.append(cur)
+                    cur = ch
+                else:
+                    cur += ch
+            lines.append(cur)
+        lines = [ln for ln in lines if ln]
+        if size <= min_size or all(d.textlength(ln, font=font) <= max_w for ln in lines):
+            return font, lines
+        size -= 2
+
+
 def make_card_image(text, path, accent="#4f6ef7", sub=""):
     W, H = 480, 832
     img = Image.new("RGB", (W, H), (17, 19, 28))
     d = ImageDraw.Draw(img)
     d.rectangle([0, H // 2 - 130, W, H // 2 + 130], fill=(24, 27, 40))
     d.rectangle([0, H // 2 - 130, 8, H // 2 + 130], fill=accent)
-    font = ImageFont.truetype(FONT_PATH, 44, index=FONT_INDEX)
-    sub_font = ImageFont.truetype(FONT_PATH, 26, index=FONT_INDEX)
-    lines = []
-    for para in text.split("\n"):
-        lines += textwrap.wrap(para, width=11) or [""]
-    total_h = len(lines) * 60
+    # text_card 的 zoompan z=1.05 会裁掉边缘 ~12px/侧，故留足边距
+    font, lines = _fit_lines(d, text, W - 100, 44, min_size=24)
+    total_h = len(lines) * int(font.size * 1.36)
     y = H // 2 - total_h // 2
     for ln in lines:
         w = d.textlength(ln, font=font)
         d.text(((W - w) / 2, y), ln, font=font, fill=(245, 246, 250))
-        y += 60
+        y += int(font.size * 1.36)
     if sub:
-        w = d.textlength(sub, font=sub_font)
-        d.text(((W - w) / 2, H // 2 + 160), sub, font=sub_font, fill=(150, 158, 181))
+        sub_font, sub_lines = _fit_lines(d, sub, W - 110, 26, min_size=16)
+        y = H // 2 + 150
+        for ln in sub_lines[:2]:
+            w = d.textlength(ln, font=sub_font)
+            d.text(((W - w) / 2, y), ln, font=sub_font, fill=(150, 158, 181))
+            y += int(sub_font.size * 1.3)
     img.save(path)
 
 
 async def text_card(text, out, dur, sub=""):
     if sub:
-        sub = textwrap.shorten(sub, width=30, placeholder="…")
+        sub = textwrap.shorten(sub, width=60, placeholder="…")
     img_path = out + ".png"
     make_card_image(text, img_path, sub=sub)
     frames = int(dur * FPS)
