@@ -3,7 +3,7 @@
     <Job v-if="currentJob" :jid="currentJob" @back="currentJob = null" />
     <template v-else>
     <div class="header">
-      <h1>🌍 跨境爆品短视频工厂</h1>
+      <h1>🌍 跨境爆品短视频工厂 <span class="team-badge">ReversePick 队</span></h1>
       <div>
         <span v-for="(ok, name) in healthBadges" :key="name" class="badge" :class="ok ? 'ok' : 'bad'">{{ svcNames[name] || name }}</span>
       </div>
